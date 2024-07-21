@@ -1,7 +1,6 @@
 import sys
 import torch
 import pygame
-import random
 import argparse
 import warnings
 import numpy as np
@@ -59,10 +58,10 @@ class DeepQNetwork(nn.Module):
             nn.Linear(8, num_actions)
         )
 
-#        for layer in [self.layers]:
-#            for module in layer:
-#                if isinstance(module, nn.Linear):
-#                    nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+        for layer in [self.layers]:
+            for module in layer:
+                if isinstance(module, nn.Linear):
+                    nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
 
     def forward(self, x):
         Q = self.layers(x)
@@ -72,7 +71,6 @@ class DeepQNetwork(nn.Module):
 class DQNAgent():
     def __init__(self, env, episodes_num, training_mode):
         self.env = env
-        self.seed = 2024
         self.discount = 1
         self.batch_size = 64
         self.running_loss = 0
@@ -81,7 +79,17 @@ class DQNAgent():
         self.learning_rate = 1e-3
         self.episodes_num = episodes_num
         self.epsilon_max = 0.999 if training_mode else -1
-        self.replay_memory = ReplayMemory(10000)
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.996
+        self.replay_memory = ReplayMemory(1000)
+
+        self.final_learning_rate = 75e-5
+        self.initial_learning_rate = 1e-3
+        self.learning_rate_coefficient = 0.995
+
+        self.discount_factor = 1
+        self.max_discount_factor = 0.97
+        self.discount_factor_coefficient = 0.9966
 
         self.model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device)
         self.target_model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device).eval()
@@ -90,12 +98,14 @@ class DQNAgent():
 
 
     def train(self):
-        step_num = 0
+        steps_num = 0
+        gama_t = 0
         for episode in range(1, self.episodes_num + 1):
-            state, _ = self.env.reset(seed=self.seed)
+            state, _ = self.env.reset()
             stop = False
             done = False
             episode_reward = 0
+            step_size = 0
             while not stop and not done:
                 action = self.action(state)
                 next_state, reward, done, stop, _ = self.env.step(action)
@@ -136,45 +146,58 @@ class DQNAgent():
                     loss.backward()  # Perform backward pass and update the gradients
                     # Clip the gradients to prevent exploding gradients
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grad_norm)
-                    self.optimizer.step()  # Update the parameters of the main network using the optimizer 
+                    self.optimizer.step()
 
-                if done or stop:
-                    self.update_weight()
-                    break
+                    if done:
+                        self.update_weight()
+                        break
                 state = next_state
                 episode_reward += reward
-                step_num += 1
+                steps_num += 1
+                step_size += 1
+
+            self.update_epsilon()
+
+            result = (f"Episode: {episode}, "
+                          f"Total Steps: {steps_num}, "
+                          f"Ep Step: {step_size}, "
+                          f"Raw Reward: {episode_reward:.2f}, "
+                          f"Discount Factor: {gama_t:.2f}, "
+                          f"Learning rate: {self.optimizer.param_groups[0]['lr']:.6f}, "
+                          f"Epsilon: {self.epsilon_max:.2f}, ")
+#f"Choose good mem: {self.choose_good_mem}")
+
+            self.initial_learning_rate = max(self.final_learning_rate, self.initial_learning_rate*self.learning_rate_coefficient)
+            for group in self.optimizer.param_groups:
+                group['lr'] = self.initial_learning_rate
+            gama_t = min(self.discount_factor - self.discount_factor_coefficient * (1 - gama_t), self.max_discount_factor)
+            self.discount = gama_t
+            print(result)
 
 
     def demo(self):
-        """
-        Reinforcement learning policy evaluation.
-        """
-
         # Load the weights of the test_network
         self.model.load_state_dict(torch.load('model/final.pth'))
         self.target_model.eval()
 
         # Testing loop over episodes
         for episode in range(1, self.episodes_num + 1):
-            state, _ = self.env.reset(seed=self.seed)
+            state, _ = self.env.reset()
             done = False
-            truncation = False
+            stop = False
             step_size = 0
             episode_reward = 0
             reward = 0
-            while not done and not truncation:
-                #print(f'y speed: {state[3]}, y pos: {state[1]}, reward : {reward}')
+            while not done and not stop:
                 action = self.action(state)
-                next_state, reward, done, truncation, _ = self.env.step(action)
+                next_state, reward, done, stop, _ = self.env.step(action)
                 state = next_state
                 episode_reward += reward
                 step_size += 1
 
-            # Print log
             result = (f"Episode: {episode}, "f"Steps: {step_size:}, "f"Reward: {episode_reward:.2f}, ")
             print(result)
-        pygame.quit()  # close the rendering window 
+        pygame.quit()
 
 
     def action(self, state):
@@ -194,6 +217,9 @@ class DQNAgent():
     def update_weight(self):
         self.target_model.load_state_dict(self.model.state_dict())
 
+
+    def update_epsilon(self):
+        self.epsilon_max = max(self.epsilon_min, self.epsilon_max * self.epsilon_decay)
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
