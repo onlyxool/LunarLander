@@ -28,7 +28,15 @@ class History:
 
         if self.writer:
             self.writer.add_scalar('Reward/Episode', reward, len(self.episode_rewards))
-            self.writer.add_scalar('Average_Reward/Last_5_Episodes', mean_reward, len(self.episode_rewards))
+            self.writer.add_scalar('Average_Reward/Last_5_Episodes', mean_reward, len(self.ave_rewards))
+
+
+    def restore(self):
+        if self.writer:
+            for i, reward in enumerate(self.episode_rewards):
+                self.writer.add_scalar('Reward/Episode', reward, len(self.episode_rewards))
+                self.writer.add_scalar('Average_Reward/Last_5_Episodes', self.ave_rewards[i], len(self.ave_rewards))
+
 
     def flush(self):
         if self.writer:
@@ -59,8 +67,9 @@ class ReplayMemory:
 
 
 class DQNAgent():
-    def __init__(self, env, hyper_parameters, training_mode, plot):
+    def __init__(self, env, hyper_parameters, training_mode, algorithms='DQN', plot=True):
         self.env = env
+        self.alg = algorithms
         self.episode = 0
         self.training_mode = training_mode
         self.batch_size = hyper_parameters['batch_size']
@@ -84,7 +93,7 @@ class DQNAgent():
 
 
     def reset(self):
-        self.state, _ = self.env.reset()
+        self.state, _ = self.env.reset(seed=42)
         self.steps = 0
         self.episode_reward = 0
 
@@ -138,9 +147,13 @@ class DQNAgent():
 
             q_value = self.model(states).gather(dim=1, index=actions.unsqueeze(-1)).squeeze(-1)
 
-            next_q_value = self.target_model(torch.as_tensor(next_states, dtype=torch.float32, device=device)).max(1)[0]
-            next_q_value = next_q_value.detach()
-            next_q_value[dones] = 0.0
+            if self.alg == 'DQN':
+                next_q_value = self.target_model(torch.as_tensor(next_states, dtype=torch.float32, device=device)).max(1)[0]
+                next_q_value = next_q_value.detach()
+                next_q_value[dones] = 0.0
+            else: # Double DQN
+                next_action_values = self.model(next_states).max(1)[1].unsqueeze(-1)
+                next_q_value = self.target_model(next_states).gather(1, next_action_values).detach().squeeze(-1)
 
             expected_q_value = rewards + next_q_value * self.gamma
 
@@ -148,6 +161,7 @@ class DQNAgent():
 
             self.optimizer.zero_grad()
             loss.backward()
+
             # Clip the gradients to prevent exploding gradients
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_grad_norm)
             self.optimizer.step()
@@ -199,12 +213,14 @@ class DQNAgent():
         self.epsilon = checkpoint['epsilon']
         self.history.ave_rewards = checkpoint['ave_rewards'].tolist()
         self.history.episode_rewards = checkpoint['episode_rewards'].tolist()
+        self.history.restore()
 
         return checkpoint['episode']
 
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
+        print(f'Save Model file to {path}')
 
 
     def flush(self):
