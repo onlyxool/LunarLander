@@ -59,7 +59,7 @@ def main():
                 agent.save_checkpoint(episode)
 
             # If the average score is greater than 200 for 10 consecutive times the training is terminated
-            if np.all(np.array(agent.history.episode_rewards[-10:])>200):
+            if np.all(np.array(agent.history.ave_rewards[-10:])>98):
                 episode_end = episode
                 break
 
@@ -74,7 +74,9 @@ def main():
         agent.save(f'model/{algorithms}_ep{episode_end}.pth')
     else:
         if len(sys.argv) >= 2 and os.path.exists(sys.argv[1]):
-            agent.demo(sys.argv[1])
+            episode_num = int(sys.argv[2]) if len(sys.argv) >= 3 and sys.argv[2].isdigit() else 1
+            for episode in range(episode_num):
+                agent.demo(sys.argv[1])
         else:
             sys.exit('Please specify the model file.')
 
