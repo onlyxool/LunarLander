@@ -59,7 +59,7 @@ def main():
                 agent.save_checkpoint(episode)
 
             # If the average score is greater than 200 for 10 consecutive times the training is terminated
-            if np.all(np.array(agent.history.ave_rewards[-10:])>200):
+            if np.all(np.array(agent.history.episode_rewards[-10:])>200):
                 episode_end = episode
                 break
 
