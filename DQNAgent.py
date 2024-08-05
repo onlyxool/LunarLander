@@ -5,6 +5,7 @@ from collections import deque, namedtuple
 from torch.utils.tensorboard import SummaryWriter
 
 from DeepQNetwork import DeepQNetwork
+from DuelingDeepQNetwork import DuelingDeepQNetwork
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -67,23 +68,27 @@ class ReplayMemory:
 
 
 class DQNAgent():
-    def __init__(self, env, hyper_parameters, training_mode, algorithms='DQN', plot=True):
+    def __init__(self, env, hyper_parameters, training_mode, algorithms='DQN', network='Dueling', plot=True):
         self.env = env
         self.alg = algorithms
         self.episode = 0
         self.training_mode = training_mode
         self.batch_size = hyper_parameters['batch_size']
 
-        self.history = History(plot)
-        self.replay_memory = ReplayMemory(10000)
+        self.history = History(plot) if training_mode else None
+        self.replay_memory = ReplayMemory(10000) if training_mode else None
 
         self.gamma = hyper_parameters['gamma']
         self.epsilon = hyper_parameters['epsilon'] if training_mode else -1
         self.epsilon_min = hyper_parameters['epsilon_min']
         self.epsilon_decay = hyper_parameters['epsilon_decay']
 
-        self.model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device)
-        self.target_model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device).eval()
+        if network == 'Dueling':
+            self.model = DuelingDeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device)
+            self.target_model = DuelingDeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device).eval()
+        else:
+            self.model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device)
+            self.target_model = DeepQNetwork(env.action_space.n, env.observation_space.shape[0]).to(device).eval()
 
         self.clip_grad_norm = 5
         self.learning_rate = hyper_parameters['learning_rate']
