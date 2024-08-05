@@ -21,6 +21,7 @@ hyper_parameters = {
 warnings.filterwarnings("ignore", category=UserWarning)
 update_rate = 10
 algorithms = 'DDQN'
+network = ''#'Dueling'
 
 def main():
     training_mode = True if len(sys.argv) >= 2 and sys.argv[1] == 'train' else False
@@ -28,8 +29,7 @@ def main():
 
     env = gym.make('LunarLander-v2', max_episode_steps=500, render_mode="human")# if not training_mode else None)
     env.metadata['render_fps'] = 60
-
-    agent = DQNAgent(env, hyper_parameters, algorithms, training_mode, True)
+    agent = DQNAgent(env, hyper_parameters, training_mode, algorithms, network, True)
 
     if training_mode:
         # Record Training episode
