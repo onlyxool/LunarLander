@@ -20,7 +20,7 @@ hyper_parameters = {
 
 warnings.filterwarnings("ignore", category=UserWarning)
 update_rate = 10
-algorithms = 'DDQN'
+algorithms = 'DQN'
 
 def main():
     training_mode = True if len(sys.argv) >= 2 and sys.argv[1] == 'train' else False
