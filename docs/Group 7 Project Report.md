@@ -436,11 +436,11 @@ In the early stages of our project we put a lot of effort into solving a develop
 
 Average Reward / Episode
 
-![](image\DQN2000ep_ave.png)
+<img src="image\DQN2000ep_ave.png" style="zoom:80%;" />
 
 Reward / Episode
 
-![](image\DQN2000ep_reward.png)
+<img src="image\DQN2000ep_reward.png" style="zoom:80%;" />
 
 This plot shows the reward obtained per episode throughout the training process.
 
@@ -458,11 +458,11 @@ This plot shows the reward obtained per episode throughout the training process.
 
 Average Reward / Episode
 
-![](image\DDQN2000_avg.png)
+<img src="image\DDQN2000_avg.png" style="zoom:80%;" />
 
 Reward / Episode
 
-![](image\DDQN2000ep_reward.png)
+<img src="image\DDQN2000ep_reward.png" style="zoom:80%;" />
 
 We trained it several times without success, two of which are shown in the figure.
 
@@ -482,15 +482,15 @@ The results indicate that the DDQN algorithm is more effective than DQN in learn
 
 Average Reward / Episode
 
-![](image\a2c1.jpg)
+<img src="image\a2c1.jpg" style="zoom:80%;" />
 
 Reward / Episode
 
-![](image\a2c2.png)
+<img src="image\a2c2.png" style="zoom:80%;" />
 
 Although the results were good for A2C, the lunar lander managed to land safely several times. The erratic behaviour we observed suggests that A2C might not be fully optimized for this specific environment. However, with the right adjustments, it can still potentially yield smoother learning curves and better overall performance.
 
-![](image\a2c3.png)
+<img src="image\a2c3.png" style="zoom:80%;" />
 
 The rewards for each episode are mostly negative in test (test_a2c_lunar_lander.py), suggesting that the lunar lander is failing to land successfully on the pad. The variability in rewards suggests that the model hasn't stabilized or learned an optimal policy. Fine-tuning hyperparameters like the learning rate or extending the training duration could help improve performance.
 
@@ -556,8 +556,5 @@ Comprehensive benchmarking and documentation are essential to ensure reproducibi
 #### 6.  Our Code on GitHub
 
 https://github.com/onlyxool/LunarLander
-
-
-
 
 
